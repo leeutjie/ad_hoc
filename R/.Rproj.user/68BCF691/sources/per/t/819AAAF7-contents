@@ -1,0 +1,133 @@
+---
+title: "Option Pricing Excercises"
+author: "Louis Becker"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Black Scholes Option Pricing Formula
+
+[Black and Scholes (1973)](https://www.cs.princeton.edu/courses/archive/fall09/cos323/papers/black_scholes73.pdf) derive a formula that can be used to value a *European* option that does **not** pay dividends before the options expiration date:
+
+
+Let 
+
++ $S$ = Stock Price
++ $X$ = Strike/Exercise Price
++ $r$ = Risk Free Rate 
++ $T$ = Time to expiration in years
++ $\sigma$ = Volatility of the relative price change of the underlying stock price
++ $N(x)$ = The [cumulative normal distribution function](https://statproofbook.github.io/P/norm-cdf.html)
+
+Then
+
+$$c = SN(d_{1})-Xe^{-rT}N(d_{2})$$
+$$p = Xe^{-rT}N(-d_{2})-SN(-d_{1})$$
+
+Where
+$$d_{1} = \frac{ln(\frac{S}{X}) + (r+\frac{\sigma^{2}}{2})T}{\sigma\sqrt{T}}$$
+$$d_{2} = \frac{ln(\frac{S}{X}) + (r-\frac{\sigma^{2}}{2})T}{\sigma\sqrt{T}} = d_{1} -\sigma\sqrt{T}$$
+Let's code it up as a function:
+
+```{r bs_euro_option_price}
+price_bs_euro_option_ <- function(S, X, r, sigma, `T`, type = "c") {
+  
+  d1 <- (log(S / X) + ((r + sigma ^ 2) / 2) * `T`) / sigma * sqrt(`T`)
+  d2 <- d1 - sigma * sqrt(`T`)
+  
+  if (type == "c") {
+    S * pnorm(d1) - X * exp(-r * `T`) * pnorm(d2)
+    
+  } else if (type == "p") {
+    X * exp(-r * `T`) * pnorm(-d2) - S * pnorm(-d1)
+    
+  }
+  
+}
+
+# alternative naming convention that appears more intuitive
+price_bs_euro_option <-
+  function(spot, strike, rf_rate, vol, ttmy, type = "c") {
+    d1 <- (log(spot / strike) + (rf_rate + vol ^ 2 / 2) * ttmy) / (vol * sqrt(ttmy))
+    d2 <- d1 - vol * sqrt(ttmy)
+    
+    if (type == "c") {
+      spot * pnorm(d1) - strike * exp(-rf_rate * ttmy) * pnorm(d2)
+      
+    } else if (type == "p") {
+      strike * exp(-rf_rate * ttmy) * pnorm(-d2) - spot * pnorm(-d1)
+      
+    }
+    
+  }
+
+```
+
+
+Let's consider the following scenario:
+
+- European option 
+- 3 months to expiry, therfore $\frac{3}{12} = 0.25$ because we measure in years
+- Stock(spot) price = R60.00
+- Strike price = R65.00
+- Risk free rate = 8% p.a.
+- Volatility = 30%
+
+This is calculated as follows:
+
+```{r}
+price_bs_euro_option(
+  spot = 60,
+  strike = 65,
+  rf_rate = 0.08,
+  ttmy = 0.25,
+  vol = 0.3,
+)
+```
+## Options on Stock Indices
+
+[Merton (1973)](http://polymer.bu.edu/hes/merton73py538.pdf) extended the Black-Scholes model to allow for a continuous dividend yield. This model can price European put/call options on a stock (or stock index) paying a known dividend yield, $q$. This implies the addition of a $e^{-qT}$ term to the put and call equations from earlier:
+
+$$c = Se^{-qT}N(d_{1})-Xe^{-rT}N(d_{2})$$
+$$p = Xe^{-rT}N(-d_{2})-Se^{-qT}N(-d_{1})$$
+Where $d_1$ and $d_2$ are now
+
+$$d_{1} = \frac{ln(\frac{S}{X}) + (r-q+\frac{\sigma^{2}}{2})T}{\sigma\sqrt{T}}$$
+
+$$d_{2} = \frac{ln(\frac{S}{X}) + (r-q-\frac{\sigma^{2}}{2})T}{\sigma\sqrt{T}} = d_{1} -\sigma\sqrt{T}$$
+We implement a minor change to the above function:
+
+```{r bsm_euro_option_price}
+
+
+# alternative naming convention that appears more intuitive
+price_bs_euro_option <-
+  function(spot,
+           strike,
+           rf_rate,
+           vol,
+           ttmy,
+           div_yield,
+           type = "c") {
+    
+    d1 <- (log(spot / strike) + (rf_rate - div_yield + vol ^ 2 / 2) * ttmy) / (vol * sqrt(ttmy))
+    d2 <- d1 - vol * sqrt(ttmy)
+    
+    if (type == "c") {
+      spot * div_yield * pnorm(d1) - strike * exp(-rf_rate * ttmy) * pnorm(d2)
+      
+    } else if (type == "p") {
+      strike * exp(-rf_rate * ttmy) * pnorm(-d2) - spot * pnorm(-d1)
+      
+    }
+    
+  }
+
+```
+
+
+
