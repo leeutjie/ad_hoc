@@ -71,7 +71,7 @@ price_bs_euro_option <-
 Let's consider the following scenario:
 
 - European option 
-- 3 months to expiry, therfore $\frac{3}{12} = 0.25$ because we measure in years
+- 3 months to expiry, therefore $\frac{3}{12} = 0.25$ because we measure in years
 - Stock(spot) price = R60.00
 - Strike price = R65.00
 - Risk free rate = 8% p.a.
@@ -103,9 +103,7 @@ We implement a minor change to the above function:
 
 ```{r bsm_euro_option_price}
 
-
-# alternative naming convention that appears more intuitive
-price_bs_euro_option <-
+price_bsm_euro_option <-
   function(spot,
            strike,
            rf_rate,
@@ -118,10 +116,10 @@ price_bs_euro_option <-
     d2 <- d1 - vol * sqrt(ttmy)
     
     if (type == "c") {
-      spot * div_yield * pnorm(d1) - strike * exp(-rf_rate * ttmy) * pnorm(d2)
+      spot * exp(-div_yield * ttmy) * pnorm(d1) - strike * exp(-rf_rate * ttmy) * pnorm(d2)
       
     } else if (type == "p") {
-      strike * exp(-rf_rate * ttmy) * pnorm(-d2) - spot * pnorm(-d1)
+      strike * exp(-rf_rate * ttmy) * pnorm(-d2) - spot * exp(-div_yield * ttmy) * pnorm(-d1)
       
     }
     
@@ -129,5 +127,94 @@ price_bs_euro_option <-
 
 ```
 
+Let's consider the following scenario:
 
+- European option 
+- 6 months to expiry, therefore $\frac{6}{12} = 0.5$ because we measure in years
+- Stock(spot) price = R100.00
+- Strike price = R95.00
+- Risk free rate = 10% p.a.
+- Volatility = 20% p.a.
 
+This is calculated as follows:
+
+```{r}
+price_bsm_euro_option(
+  spot = 100,
+  strike = 95,
+  rf_rate = 0.1,
+  ttmy = 0.5,
+  div_yield = 0.05,
+  vol = 0.2,
+  type = "p"
+)
+```
+
+## Options on Futures
+
+The formula from [Black (1973)](https://www.sciencedirect.com/science/article/abs/pii/0304405X76900246) provides the price of a European option when the underlying security is a forward or futures contract with an initial price, $F$:
+
+$$c = e^{-rT}[FN(d_{1})-XN(d_{2})]$$
+$$p = e^{-rT}[XN(-d_{2})-FN(-d_{1})]$$
+Where
+
+$$d_{1} = \frac{ln(\frac{F}{X}) + (\frac{\sigma^{2}}{2})T}{\sigma\sqrt{T}}$$
+$$d_{2} = \frac{ln(\frac{F}{X}) - (\frac{\sigma^{2}}{2})T}{\sigma\sqrt{T}} = d_{1} -\sigma\sqrt{T}$$
+
+```{r price_futures_euro_option}
+price_futures_euro_option <-
+  function(spot,
+           strike,
+           rf_rate,
+           vol,
+           ttmy,
+           type = "c") {
+    
+    d1 <- (log(spot / strike) + (vol ^ 2 / 2) * ttmy) / (vol * sqrt(ttmy))
+    d2 <- d1 - vol * sqrt(ttmy)
+    
+    if (type == "c") {
+      exp(-rf_rate * ttmy) * (spot * pnorm(d1) - strike * pnorm(d2))
+      
+    } else if (type == "p") {
+      exp(-rf_rate * ttmy) * (strike * pnorm(-d2) - spot * pnorm(-d1))
+      
+    }
+    
+  }
+```
+
+Let's consider the following scenario:
+
+- A European _call_ option on [Brent Blend](https://www.investopedia.com/terms/b/brentblend.asp) futures
+- 9 months to expiry, therefore $\frac{9}{12} = 0.75$ because we measure in years
+- Futures(spot) price = R19.00
+- Strike price = R19.00
+- Risk free rate = 10% p.a.
+- Volatility = 28% p.a.
+
+This is calculated as follows:
+
+```{r}
+price_futures_euro_option(
+  spot = 19,
+  strike = 19,
+  rf_rate = 0.1,
+  ttmy = 0.75,
+  vol = 0.28,
+  type = "c"
+)
+```
+
+And for the _put_ option:
+
+```{r}
+price_futures_euro_option(
+  spot = 19,
+  strike = 19,
+  rf_rate = 0.1,
+  ttmy = 0.75,
+  vol = 0.28,
+  type = "p"
+)
+```
