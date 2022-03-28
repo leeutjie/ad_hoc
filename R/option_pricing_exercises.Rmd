@@ -218,3 +218,8 @@ price_futures_euro_option(
   type = "p"
 )
 ```
+
+## Margined Options on Futures
+
+[Asay(1982)](https://onlinelibrary.wiley.com/doi/abs/10.1002/fut.3990030308) Modified the Black (1976) model to for options on futures contracts.
+
